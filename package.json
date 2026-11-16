@@ -1,0 +1,9 @@
+{
+  "name": "model-picks",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "nfl": "node src/run-nfl.js"
+  }
+}
