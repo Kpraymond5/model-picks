@@ -13,14 +13,14 @@
   --turf:#1f6b3a; --turf-2:#2f8a4c; --on-turf:#ffffff;
   --pick-bg:#c9f07a; --pick-fg:#1b3a07;
   --q1:#38761d; --q2:#d9ead3; --q3:#fff2cc; --q4:#f4cccc; --q5:#cc0000; --q-ink:#1a1a1a;
-  --freeze-shadow:rgba(20,40,25,.18);
+  --freeze-shadow:rgba(20,40,25,.18); --divider:#a9b5a6;
   --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#101512; --surface:#171e19; --fg:#e6ece6; --muted:#9aa79d; --line:#2a342d; --head:#1e2721;
-  --turf:#2c8a4c; --turf-2:#3aa25d; --pick-bg:#9fd14a; --pick-fg:#132a04; --freeze-shadow:rgba(0,0,0,.5); color-scheme:dark}}
+  --turf:#2c8a4c; --turf-2:#3aa25d; --pick-bg:#9fd14a; --pick-fg:#132a04; --freeze-shadow:rgba(0,0,0,.5); --divider:#4a5a4e; color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px}
@@ -69,6 +69,7 @@ thead tr.grp th{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;p
 thead tr.grp th.ul{border-bottom:2px solid var(--turf)}
 td{padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
 tbody.g tr:first-child td{border-bottom-style:dotted}
+tbody.g tr:last-child td{border-bottom:3px solid var(--divider)}
 tbody.g:last-child tr:last-child td{border-bottom:0}
 td.time{font-size:.78rem;color:var(--muted);text-align:left;vertical-align:middle;border-right:1px solid var(--line);line-height:1.35}
 td.team{font-weight:600}
@@ -81,8 +82,6 @@ td.na{color:var(--muted)}
 tbody.g.picked td.time{box-shadow:inset 3px 0 0 var(--pick-bg)}
 td.delta{vertical-align:middle}
 td.delta b{font-family:var(--display);font-size:1.1rem}
-.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.75rem;color:var(--muted)}
-.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-2px;margin:0 5px 0 6px}
 @media (max-width:640px){
   .shell{grid-template-columns:1fr}
   .rail{flex-direction:row;overflow-x:auto;padding:0;border-right:0;border-bottom:1px solid var(--line)}
@@ -137,8 +136,8 @@ td.delta b{font-family:var(--display);font-size:1.1rem}
             <th></th>
             <th colspan="3" class="ul">Model</th>
             <th colspan="4"></th>
-            <th class="ul">Off yds / play</th>
-            <th class="ul">Def yds / play</th>
+            <th class="ul">Offense</th>
+            <th class="ul">Defense</th>
             <th></th>
           </tr>
           <tr>
@@ -160,12 +159,6 @@ td.delta b{font-family:var(--display);font-size:1.1rem}
           </tr>
         </thead>
       </table>
-    </div>
-
-    <div class="legend">
-      <span>Ranks by quintile of 32:<i style="background:var(--q1)"></i>1–6<i style="background:var(--q2)"></i>7–13<i style="background:var(--q3)"></i>14–19<i style="background:var(--q4)"></i>20–26<i style="background:var(--q5)"></i>27–32</span>
-      <span><i style="background:var(--pick-bg);margin-left:0"></i>Model pick against the spread</span>
-      <span>Line is the model's spread; Δ is how far it sits from the book's.</span>
     </div>
   </main>
 </div>
