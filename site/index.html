@@ -13,15 +13,16 @@
   --turf:#1f6b3a; --turf-2:#2f8a4c; --on-turf:#ffffff;
   --pick-bg:#c9f07a; --pick-fg:#1b3a07;
   --q1:#38761d; --q2:#d9ead3; --q3:#fff2cc; --q4:#f4cccc; --q5:#cc0000; --q-ink:#1a1a1a;
-  --freeze-shadow:rgba(20,40,25,.18); --divider:#a9b5a6; --noqb:#ffff00;
+  --freeze-shadow:rgba(20,40,25,.18); --divider:#a9b5a6; --qna:#d9d9d9;
   --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#101512; --surface:#171e19; --fg:#e6ece6; --muted:#9aa79d; --line:#2a342d; --head:#1e2721;
-  --turf:#2c8a4c; --turf-2:#3aa25d; --pick-bg:#9fd14a; --pick-fg:#132a04; --freeze-shadow:rgba(0,0,0,.5); --divider:#4a5a4e; --noqb:#e6d34a; color-scheme:dark}}
+  --turf:#2c8a4c; --turf-2:#3aa25d; --pick-bg:#9fd14a; --pick-fg:#132a04; --freeze-shadow:rgba(0,0,0,.5); --divider:#4a5a4e; --qna:#3a413c; color-scheme:dark}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px}
 .banner{color:var(--on-turf);padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -92,7 +93,11 @@ table.pr tbody tr:nth-child(4n) td{border-bottom-color:var(--divider)}
 .pa{position:sticky;left:0;width:40px;min-width:40px;z-index:1;background:var(--surface);color:var(--muted);text-align:right}
 .pb{position:sticky;left:40px;width:150px;min-width:150px;z-index:1;background:var(--surface);box-shadow:inset -1px 0 0 var(--line),6px 0 6px -4px var(--freeze-shadow)}
 th.pa,th.pb{background:var(--head);z-index:2}
-td.pb.noqb{background:var(--noqb);color:var(--q-ink)}
+td.qna{background:var(--qna);color:var(--muted)}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover,th.sorted{color:var(--fg)}
+th.sortable:focus-visible{outline:2px solid var(--turf);outline-offset:-2px}
+th .arrow{font-size:.7em;margin-left:3px}
 th.off{background:var(--q2);color:var(--q-ink)}
 th.def{background:var(--q3);color:var(--q-ink)}
 td.v{color:var(--muted)}
@@ -238,53 +243,101 @@ const EXPANDED = [
   {g:"Other", cols:[{h:"Penalties", k:"penaltyYards"}, {h:"Opp penalties", k:"oppPenaltyYards"}, {h:"FG %", k:"fgPct"}, {h:"SoS", k:"sos", rankOnly:true}, {h:"QBR", k:"qbr", rankOnly:true}, {h:"QB", text:"qb"}]},
 ];
 
-function teamCell(t){
-  const title = t.qbrAssumed ? ` title="No qualified QB on ESPN's QBR list; the model uses rank ${data.settings.qbrMissingRank}"` : "";
-  return `<td class="pb team l${t.qbrAssumed ? " noqb" : ""}"${title}>${esc(t.name)}</td>`;
+// QBR: a team with no qualified passer shows the model's placeholder rank on a grey cell.
+function qbrMissing(t){ return t.qbrAssumed || t.qbr == null; }
+function qbrVal(t){ return qbrMissing(t) ? (data.settings?.qbrMissingRank ?? 25) : t.qbr; }
+function qbrCell(t, extra){
+  if (!qbrMissing(t)) return cell(t.qbr, `c ${extra} ${q(t.qbr)}`);
+  return `<td class="c qna ${extra}" title="No qualified QB on ESPN's QBR list; the model uses ${qbrVal(t)}">${qbrVal(t)}</td>`;
+}
+
+// Sorting: click a header to sort ascending, click again for descending. Blanks always sort last.
+let prSort = {id: "modelRank", dir: 1};
+function sortValue(v){
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return v;
+  const s = String(v);
+  const time = s.match(/^(\d+):(\d+)/);
+  if (time) return +time[1] * 60 + +time[2];                      // minutes:seconds
+  const rec = s.match(/^(\d+)-(\d+)(?:-(\d+))?$/);
+  if (rec) { const w = +rec[1], l = +rec[2], t = +(rec[3] || 0); return -(w + t / 2) / Math.max(1, w + l + t); } // best record first
+  const n = parseFloat(s.replace(/[%,]/g, ""));
+  return Number.isFinite(n) ? n : s.toLowerCase();
+}
+function sortTh(id, label, cls, attrs = ""){
+  const on = prSort.id === id;
+  const arrow = on ? `<span class="arrow" aria-hidden="true">${prSort.dir > 0 ? "▲" : "▼"}</span>` : "";
+  return `<th class="${cls} sortable${on ? " sorted" : ""}" data-sort="${id}" tabindex="0" aria-sort="${on ? (prSort.dir > 0 ? "ascending" : "descending") : "none"}" ${attrs}>${label}${arrow}</th>`;
 }
 
 function renderRankings(){
-  const rows = data.powerRankings || [];
   const table = $("prTable");
   const expanded = $("expand").checked;
   table.classList.toggle("wide", expanded);
+
+  // getters for every sortable column
+  const G = {
+    pos: t => t.modelRank, team: t => t.name, modelRank: t => t.modelRank, record: t => t.record,
+    qbr: qbrVal, qb: t => t.qb, off: t => t.offYppRank, def: t => t.defYppRank,
+  };
+  if (expanded) for (const grp of EXPANDED) for (const c of grp.cols){
+    if (c.text) continue;
+    if (c.k !== "qbr") G[c.k + ".r"] = t => t.stats?.[c.k]?.r;
+    if (!c.rankOnly) G[c.k + ".v"] = t => t.stats?.[c.k]?.v;
+    if (c.x) G[c.x[0] + ".v"] = t => t.stats?.[c.x[0]]?.v;
+  }
+  if (!G[prSort.id]) prSort = {id: "modelRank", dir: 1};
+  const get = G[prSort.id];
+  const rows = [...(data.powerRankings || [])].sort((a, b) => {
+    const x = sortValue(get(a)), y = sortValue(get(b));
+    if (x === y) return a.modelRank - b.modelRank;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    return (x < y ? -1 : 1) * prSort.dir;
+  });
+  const front = (t, i) => `<td class="pa">${i + 1}</td><td class="pb team l">${esc(t.name)}</td>${cell(t.modelRank, "c " + q(t.modelRank))}${cell(t.record, "c")}`;
+
   if (!expanded){
     table.innerHTML = `<thead>
-      <tr><th class="pa" rowspan="2">#</th><th class="pb l" rowspan="2">Team</th>
-        <th class="c" rowspan="2">Model rank</th><th class="c" rowspan="2">Record</th><th class="c gl" rowspan="2">QBR</th><th class="l" rowspan="2">QB</th>
+      <tr>${sortTh("pos", "#", "pa", 'rowspan="2"')}${sortTh("team", "Team", "pb l", 'rowspan="2"')}
+        ${sortTh("modelRank", "Model rank", "c", 'rowspan="2"')}${sortTh("record", "Record", "c", 'rowspan="2"')}
+        ${sortTh("qbr", "QBR", "c gl", 'rowspan="2"')}${sortTh("qb", "QB", "l", 'rowspan="2"')}
         <th class="c off gl">Offense</th><th class="c def gl">Defense</th></tr>
-      <tr><th class="c off gl sub">Rank</th><th class="c def gl sub">Rank</th></tr></thead>
-      <tbody>${rows.map((t, i) => `<tr>
-        <td class="pa">${i + 1}</td>${teamCell(t)}
-        ${cell(t.modelRank, "c " + q(t.modelRank))}
-        ${cell(t.record, "c")}
-        ${cell(t.qbr, "c gl " + q(t.qbr))}
+      <tr>${sortTh("off", "Rank", "c off gl sub")}${sortTh("def", "Rank", "c def gl sub")}</tr></thead>
+      <tbody>${rows.map((t, i) => `<tr>${front(t, i)}
+        ${qbrCell(t, "gl")}
         ${cell(t.qb, "l")}
         ${cell(t.offYppRank, "c gl " + q(t.offYppRank))}
         ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}</tr>`).join("")}</tbody>`;
     return;
   }
+
   const span = c => c.text || c.rankOnly ? 1 : c.x ? 3 : 2;
-  let h1 = `<th class="pa" rowspan="3">#</th><th class="pb l" rowspan="3">Team</th><th class="c" rowspan="3">Model rank</th><th class="c" rowspan="3">Record</th>`;
+  let h1 = sortTh("pos", "#", "pa", 'rowspan="3"') + sortTh("team", "Team", "pb l", 'rowspan="3"') +
+           sortTh("modelRank", "Model rank", "c", 'rowspan="3"') + sortTh("record", "Record", "c", 'rowspan="3"');
   let h2 = "", h3 = "";
   for (const grp of EXPANDED){
     h1 += `<th class="grp2" colspan="${grp.cols.reduce((n, c) => n + span(c), 0)}">${esc(grp.g)}</th>`;
     grp.cols.forEach((c, i) => {
       const edge = i === 0 ? "gl" : "sl";
       h2 += `<th class="st ${edge}" colspan="${span(c)}">${esc(c.h)}</th>`;
-      if (c.text) h3 += `<th class="sub l ${edge}"></th>`;
-      else if (c.rankOnly) h3 += `<th class="sub c ${edge}">Rank</th>`;
-      else h3 += `<th class="sub c ${edge}">Rank</th><th class="sub">Avg</th>${c.x ? `<th class="sub">${esc(c.x[1])}</th>` : ""}`;
+      if (c.text) h3 += sortTh(c.text, "Name", `sub l ${edge}`);
+      else if (c.k === "qbr") h3 += sortTh("qbr", "Rank", `sub c ${edge}`);
+      else {
+        h3 += sortTh(c.k + ".r", "Rank", `sub c ${edge}`);
+        if (!c.rankOnly) h3 += sortTh(c.k + ".v", "Avg", "sub");
+        if (c.x) h3 += sortTh(c.x[0] + ".v", esc(c.x[1]), "sub");
+      }
     });
   }
   const body = rows.map((t, i) => {
-    let tds = `<td class="pa">${i + 1}</td>${teamCell(t)}${cell(t.modelRank, "c " + q(t.modelRank))}${cell(t.record, "c")}`;
+    let tds = front(t, i);
     for (const grp of EXPANDED) grp.cols.forEach((c, j) => {
       const edge = j === 0 ? "gl" : "sl";
       if (c.text) { tds += cell(t[c.text], "l " + edge); return; }
+      if (c.k === "qbr") { tds += qbrCell(t, edge); return; }
       const s = t.stats?.[c.k] || {};
-      const r = c.k === "qbr" ? t.qbr : s.r;
-      tds += cell(r, `c ${edge} ${q(r)}`);
+      tds += cell(s.r, `c ${edge} ${q(s.r)}`);
       if (!c.rankOnly) tds += cell(s.v, "v");
       if (c.x) tds += cell(t.stats?.[c.x[0]]?.v, "v");
     });
@@ -292,6 +345,18 @@ function renderRankings(){
   }).join("");
   table.innerHTML = `<thead><tr>${h1}</tr><tr>${h2}</tr><tr>${h3}</tr></thead><tbody>${body}</tbody>`;
 }
+
+function onSort(e){
+  const th = e.target.closest("th[data-sort]");
+  if (!th || (e.type === "keydown" && e.key !== "Enter" && e.key !== " ")) return;
+  e.preventDefault();
+  const id = th.dataset.sort;
+  prSort = prSort.id === id ? {id, dir: -prSort.dir} : {id, dir: 1};
+  renderRankings();
+  document.querySelector(`#prTable th[data-sort="${CSS.escape(id)}"]`)?.focus();
+}
+$("prTable").addEventListener("click", onSort);
+$("prTable").addEventListener("keydown", onSort);
 
 // ---------- Match-up ----------
 function renderMatchup(){
@@ -325,7 +390,7 @@ function renderMatchup(){
         <td class="delta" rowspan="2">${g.delta == null ? "–" : `<b>${g.delta.toFixed(1)}</b>`}</td>` : ""}
       ${cell(t.record, "c sepL")}
       ${cell(t.modelRank, "c " + q(t.modelRank))}
-      ${cell(t.qbr, "c gap " + q(t.qbr))}
+      ${qbrCell(t, "gap")}
       ${cell(t.qb, "l")}
       ${cell(t.offYppRank, "c sepL " + q(t.offYppRank))}
       ${cell(t.defYppRank, "c sepL " + q(t.defYppRank))}
