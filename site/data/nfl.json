@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-17T00:02:52.165Z",
+ "generatedAt": "2026-11-17T00:13:20.309Z",
  "season": 2026,
  "gamesSource": "The Odds API (DraftKings)",
  "settings": {
@@ -424,7 +424,7 @@
     "defYppRank": 22,
     "sosRank": 23,
     "spread": -6.5,
-    "ml": -305
+    "ml": -298
    },
    "home": {
     "name": "Washington",
@@ -436,7 +436,7 @@
     "defYppRank": 17,
     "sosRank": 15,
     "spread": 6.5,
-    "ml": 245
+    "ml": 240
    },
    "line": 3.05,
    "delta": 3.45,
