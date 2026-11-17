@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-17T07:53:00.783Z",
+ "generatedAt": "2026-11-17T12:17:46.407Z",
  "season": 2026,
  "gamesSource": "The Odds API (DraftKings)",
  "settings": {
@@ -20,23 +20,23 @@
     "offYppRank": 31,
     "defYppRank": 30,
     "sosRank": 16,
-    "spread": 11.5,
-    "ml": 490
+    "spread": 12.5,
+    "ml": 500
    },
    "home": {
     "name": "Houston",
     "modelRank": 8,
     "record": "3-6",
     "qb": "C.J. Stroud",
-    "qbr": 7,
+    "qbr": 8,
     "offYppRank": 9,
     "defYppRank": 16,
     "sosRank": 13,
-    "spread": -11.5,
-    "ml": -675
+    "spread": -12.5,
+    "ml": -700
    },
    "line": -12.91,
-   "delta": 1.41,
+   "delta": 0.41,
    "pick": null
   },
   {
@@ -56,7 +56,7 @@
    },
    "home": {
     "name": "Kansas City",
-    "modelRank": 4,
+    "modelRank": 5,
     "record": "7-2",
     "qb": "P. Mahomes",
     "qbr": 11,
@@ -66,13 +66,13 @@
     "spread": -16.5,
     "ml": -1800
    },
-   "line": -12.49,
-   "delta": 4.01,
+   "line": -12.07,
+   "delta": 4.43,
    "pick": "Arizona"
   },
   {
    "kickoff": "2026-11-22T18:00:00.000Z",
-   "total": 44.5,
+   "total": 43.5,
    "away": {
     "name": "Baltimore",
     "modelRank": 19,
@@ -83,7 +83,7 @@
     "defYppRank": 18,
     "sosRank": 20,
     "spread": 2.5,
-    "ml": 120
+    "ml": 114
    },
    "home": {
     "name": "Carolina",
@@ -95,7 +95,7 @@
     "defYppRank": 9,
     "sosRank": 14,
     "spread": -2.5,
-    "ml": -142
+    "ml": -135
    },
    "line": -4.51,
    "delta": 2.01,
@@ -152,7 +152,7 @@
     "modelRank": 14,
     "record": "7-2",
     "qb": "C. Williams",
-    "qbr": 6,
+    "qbr": 7,
     "offYppRank": 14,
     "defYppRank": 29,
     "sosRank": 19,
@@ -269,7 +269,7 @@
     "defYppRank": 15,
     "sosRank": 12,
     "spread": 3,
-    "ml": 140
+    "ml": 130
    },
    "home": {
     "name": "LA Chargers",
@@ -281,7 +281,7 @@
     "defYppRank": 25,
     "sosRank": 3,
     "spread": -3,
-    "ml": -166
+    "ml": -155
    },
    "line": 1.79,
    "delta": 4.79,
@@ -300,19 +300,19 @@
     "defYppRank": 32,
     "sosRank": 7,
     "spread": 10,
-    "ml": 400
+    "ml": 410
    },
    "home": {
     "name": "Denver",
     "modelRank": 10,
     "record": "7-2",
     "qb": "B. Nix",
-    "qbr": 22,
+    "qbr": 23,
     "offYppRank": 26,
     "defYppRank": 12,
     "sosRank": 2,
     "spread": -10,
-    "ml": -535
+    "ml": -550
    },
    "line": -8.71,
    "delta": 1.29,
@@ -326,7 +326,7 @@
     "modelRank": 9,
     "record": "7-2",
     "qb": "T. Lawrence",
-    "qbr": 8,
+    "qbr": 9,
     "offYppRank": 6,
     "defYppRank": 20,
     "sosRank": 21,
@@ -528,8 +528,46 @@
    }
   },
   {
-   "name": "Kansas City",
+   "name": "Green Bay",
    "modelRank": 4,
+   "record": "6-4",
+   "qb": "J. Love",
+   "qbr": 6,
+   "offYppRank": 13,
+   "defYppRank": 3,
+   "sosRank": 9,
+   "score": 7.91,
+   "ranks": {
+    "yardsPerGame": 14,
+    "oppYardsPerGame": 11,
+    "yardsPerPlay": 13,
+    "oppYardsPerPlay": 3,
+    "yardsPerPoint": 17,
+    "oppYardsPerPoint": 14,
+    "thirdDown": 19,
+    "redZone": 21,
+    "redZoneAtt": 11,
+    "completion": 19,
+    "intThrown": 19,
+    "fumblesLost": 27,
+    "qbSacked": 14,
+    "oppThirdDown": 24,
+    "oppRedZone": 20,
+    "oppRedZoneAtt": 16,
+    "oppCompletion": 13,
+    "interceptions": 2,
+    "oppFumblesLost": 14,
+    "sackPct": 10,
+    "penaltyYards": 28,
+    "oppPenaltyYards": 12,
+    "fgPct": 29,
+    "sos": 9,
+    "qbr": 6
+   }
+  },
+  {
+   "name": "Kansas City",
+   "modelRank": 5,
    "record": "7-2",
    "qb": "P. Mahomes",
    "qbr": 11,
@@ -563,44 +601,6 @@
     "fgPct": 32,
     "sos": 31,
     "qbr": 11
-   }
-  },
-  {
-   "name": "Green Bay",
-   "modelRank": 5,
-   "record": "6-4",
-   "qb": "J. Love",
-   "qbr": 9,
-   "offYppRank": 13,
-   "defYppRank": 3,
-   "sosRank": 9,
-   "score": 8.002,
-   "ranks": {
-    "yardsPerGame": 14,
-    "oppYardsPerGame": 11,
-    "yardsPerPlay": 13,
-    "oppYardsPerPlay": 3,
-    "yardsPerPoint": 17,
-    "oppYardsPerPoint": 14,
-    "thirdDown": 19,
-    "redZone": 21,
-    "redZoneAtt": 11,
-    "completion": 19,
-    "intThrown": 19,
-    "fumblesLost": 27,
-    "qbSacked": 14,
-    "oppThirdDown": 24,
-    "oppRedZone": 20,
-    "oppRedZoneAtt": 16,
-    "oppCompletion": 13,
-    "interceptions": 2,
-    "oppFumblesLost": 14,
-    "sackPct": 10,
-    "penaltyYards": 28,
-    "oppPenaltyYards": 12,
-    "fgPct": 29,
-    "sos": 9,
-    "qbr": 9
    }
   },
   {
@@ -684,11 +684,11 @@
    "modelRank": 8,
    "record": "3-6",
    "qb": "C.J. Stroud",
-   "qbr": 7,
+   "qbr": 8,
    "offYppRank": 9,
    "defYppRank": 16,
    "sosRank": 13,
-   "score": 8.809,
+   "score": 8.84,
    "ranks": {
     "yardsPerGame": 11,
     "oppYardsPerGame": 20,
@@ -714,7 +714,7 @@
     "oppPenaltyYards": 8,
     "fgPct": 3,
     "sos": 13,
-    "qbr": 7
+    "qbr": 8
    }
   },
   {
@@ -722,11 +722,11 @@
    "modelRank": 9,
    "record": "7-2",
    "qb": "T. Lawrence",
-   "qbr": 8,
+   "qbr": 9,
    "offYppRank": 6,
    "defYppRank": 20,
    "sosRank": 21,
-   "score": 8.884,
+   "score": 8.914,
    "ranks": {
     "yardsPerGame": 9,
     "oppYardsPerGame": 9,
@@ -752,7 +752,7 @@
     "oppPenaltyYards": 19,
     "fgPct": 11,
     "sos": 21,
-    "qbr": 8
+    "qbr": 9
    }
   },
   {
@@ -760,11 +760,11 @@
    "modelRank": 10,
    "record": "7-2",
    "qb": "B. Nix",
-   "qbr": 22,
+   "qbr": 23,
    "offYppRank": 26,
    "defYppRank": 12,
    "sosRank": 2,
-   "score": 9.34,
+   "score": 9.371,
    "ranks": {
     "yardsPerGame": 30,
     "oppYardsPerGame": 27,
@@ -790,7 +790,7 @@
     "oppPenaltyYards": 3,
     "fgPct": 18,
     "sos": 2,
-    "qbr": 22
+    "qbr": 23
    }
   },
   {
@@ -912,11 +912,11 @@
    "modelRank": 14,
    "record": "7-2",
    "qb": "C. Williams",
-   "qbr": 6,
+   "qbr": 7,
    "offYppRank": 14,
    "defYppRank": 29,
    "sosRank": 19,
-   "score": 9.98,
+   "score": 10.01,
    "ranks": {
     "yardsPerGame": 7,
     "oppYardsPerGame": 7,
@@ -942,7 +942,7 @@
     "oppPenaltyYards": 26,
     "fgPct": 23,
     "sos": 19,
-    "qbr": 6
+    "qbr": 7
    }
   },
   {
