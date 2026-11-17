@@ -1,7 +1,8 @@
 // Builds the NFL output (power rankings + this week's games). No file or env access here,
 // so the same code runs in Node (src/run-nfl.js) and in a browser for testing.
 import { TEAM_NAMES } from "./teams.js";
-import { parseTeamRankings, parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason } from "./sources.js";
+import { parseTeamRankings, parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason,
+         standingsUrl, parseStandings, futuresUrl, parseDivisionOdds } from "./sources.js";
 import { powerRankings, evaluateGame } from "./model.js";
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -70,6 +71,19 @@ export async function buildNfl({ config, get, oddsKey = null, manualGames = null
   }
   log(`ok  ${games.length} games from ${gamesSource}`);
 
+  // 6. Division standings (ESPN) and division-winner odds (DraftKings via ESPN).
+  //    Optional: if either source fails, the rest of the page still publishes.
+  let standings = [], divOdds = {};
+  try {
+    standings = parseStandings(await get(standingsUrl(season), "json"));
+    log(`ok  ESPN standings (${standings.length} teams)`);
+  } catch (e) { log(`warn standings: ${e.message}`); }
+  try {
+    const byId = Object.fromEntries(standings.map(s => [s.espnId, s.team]));
+    divOdds = parseDivisionOdds(await get(futuresUrl(season), "json"), byId);
+    log(`ok  division odds (${Object.keys(divOdds).length} teams)`);
+  } catch (e) { log(`warn division odds: ${e.message}`); }
+
   const teamOut = name => ({
     name, modelRank: modelRank[name], record: info[name].record, qb: info[name].qb,
     qbr: stats[name].qbr.assumed ? null : stats[name].qbr.r, qbrAssumed: !!stats[name].qbr.assumed,
@@ -92,5 +106,11 @@ export async function buildNfl({ config, get, oddsKey = null, manualGames = null
       };
     }),
     powerRankings: table.map(r => ({ ...teamOut(r.team), score: round(r.score, 3), stats: stats[r.team] })),
+    divisions: [...new Set(standings.map(s => s.division))].map(division => ({
+      name: division,
+      conference: standings.find(s => s.division === division).conference,
+      teams: standings.filter(s => s.division === division).sort((a, b) => a.seed - b.seed)
+        .map(s => ({ ...teamOut(s.team), overall: s.overall, divRecord: s.divRecord, odds: divOdds[s.team] ?? null })),
+    })),
   };
 }

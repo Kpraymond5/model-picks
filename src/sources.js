@@ -38,6 +38,47 @@ export function parseQbr(json) {
   return out;
 }
 
+// ESPN standings -> [{team, espnId, conference, division, overall, divRecord, seed}]
+export function standingsUrl(season) {
+  return `https://site.api.espn.com/apis/v2/sports/football/nfl/standings?season=${season}&level=3`;
+}
+export function parseStandings(json) {
+  const out = [];
+  const walk = (g, conference) => {
+    if (g.abbreviation === "AFC" || g.abbreviation === "NFC") conference = g.abbreviation;
+    for (const e of g.standings?.entries || []) {
+      const team = BY_ESPN[e.team?.abbreviation];
+      if (!team) continue;
+      const stat = name => e.stats?.find(s => s.name === name || s.type === name)?.displayValue ?? null;
+      out.push({
+        team, espnId: String(e.team.id), conference, division: g.name,
+        overall: stat("overall"), divRecord: stat("vs. Div.") ?? stat("divisionRecord"),
+        seed: Number(stat("playoffSeed")) || 99,
+      });
+    }
+    for (const c of g.children || []) walk(c, conference);
+  };
+  walk(json, null);
+  return out;
+}
+
+// ESPN futures (DraftKings) -> { team: "+750" } for division-winner markets
+export function futuresUrl(season) {
+  return `https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/${season}/futures?limit=100`;
+}
+export function parseDivisionOdds(json, teamByEspnId) {
+  const odds = {};
+  for (const item of json.items || []) {
+    if (item.type !== "winDivision") continue;
+    for (const b of item.futures?.[0]?.books || []) {
+      const id = b.team?.$ref?.match(/teams\/(\d+)/)?.[1];
+      const team = teamByEspnId[id];
+      if (team && b.value != null) odds[team] = String(b.value);
+    }
+  }
+  return odds;
+}
+
 // The Odds API v4 events -> [{kickoff, away, home, homeSpread, total, awayMl, homeMl, book}]
 export function oddsUrl(apiKey) {
   return "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds" +

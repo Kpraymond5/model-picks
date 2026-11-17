@@ -86,6 +86,16 @@ tbody.g.picked td.time{box-shadow:inset 3px 0 0 var(--pick-bg)}
 td.delta{vertical-align:middle}
 td.delta b{font-family:var(--display);font-size:1.1rem}
 .view{display:flex;flex-direction:column;gap:14px;min-width:0}
+/* Division Rank */
+.divwrap{display:flex;flex-direction:column;gap:22px}
+.conf h2{font-family:var(--display);font-weight:700;font-size:1.7rem;margin:0 0 10px;line-height:1}
+.conf{display:flex;flex-direction:column;gap:14px}
+table.dv{table-layout:fixed;width:950px;min-width:0}
+table.dv th.dname{font-size:1.05rem;color:var(--fg);text-align:left}
+.divwrap .board{width:fit-content;max-width:100%}
+table.dv .pb{left:0}
+table.dv td.team{color:var(--turf)}
+table.dv tbody tr:last-child td{border-bottom:0}
 /* Power Rankings */
 table.pr{min-width:640px}
 table.pr.wide{min-width:0;width:auto}
@@ -136,10 +146,15 @@ td.gl,th.gl{border-left:4px solid var(--surface)}
     <nav class="tabs" aria-label="Views">
       <a href="#matchup" id="tabMatchup" class="on">Match-up</a>
       <a href="#rankings" id="tabRankings">Power Rankings</a>
-      <span>Division Rank<em>Soon</em></span>
+      <a href="#division" id="tabDivision">Division Rank</a>
     </nav>
 
     <div id="msg" class="notice" hidden></div>
+
+    <section class="view" id="viewDivision" hidden>
+      <div class="bar"><div class="spacer"></div><span class="stamp"></span></div>
+      <div id="divWrap" class="divwrap"></div>
+    </section>
 
     <section class="view" id="viewRankings" hidden>
       <div class="bar">
@@ -226,6 +241,40 @@ function render(){
   document.querySelectorAll(".stamp").forEach(s => s.textContent = stamp);
   renderMatchup();
   renderRankings();
+  renderDivisions();
+}
+
+// ---------- Division Rank ----------
+function renderDivisions(){
+  const divs = data.divisions || [];
+  const wrap = $("divWrap");
+  if (!divs.length){ wrap.innerHTML = `<p class="none">Standings aren't available yet. They appear after the next update run.</p>`; return; }
+  const odds = v => v == null ? null : (/^[+-]/.test(v) ? v : (Number(v) > 0 ? "+" + v : v));
+  const table = d => `<div class="board"><table class="dv">
+    <colgroup><col style="width:160px"><col style="width:110px"><col style="width:90px"><col style="width:90px">
+      <col style="width:100px"><col style="width:70px"><col style="width:150px"><col style="width:90px"><col style="width:90px"></colgroup>
+    <thead>
+      <tr><th class="dname pb l" rowspan="2">${esc(d.name)}</th>
+        <th class="c" rowspan="2">Overall W-L</th><th class="c" rowspan="2">Div W-L</th><th class="c" rowspan="2">Odds</th>
+        <th class="c gl" rowspan="2">Model rank</th><th class="c gl" rowspan="2">QBR</th><th class="l" rowspan="2">QB</th>
+        <th class="c off gl">Offense</th><th class="c def gl">Defense</th></tr>
+      <tr><th class="c off gl sub">Rank</th><th class="c def gl sub">Rank</th></tr>
+    </thead>
+    <tbody>${d.teams.map(t => `<tr>
+      <td class="pb team l">${esc(t.name)}</td>
+      ${cell(t.overall, "c")}
+      ${cell(t.divRecord, "c")}
+      ${cell(odds(t.odds), "c")}
+      ${cell(t.modelRank, "c gl " + q(t.modelRank))}
+      ${qbrCell(t, "gl")}
+      ${cell(t.qb, "l")}
+      ${cell(t.offYppRank, "c gl " + q(t.offYppRank))}
+      ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}</tr>`).join("")}</tbody>
+  </table></div>`;
+  wrap.innerHTML = ["AFC", "NFC"].map(c => {
+    const list = divs.filter(d => d.conference === c);
+    return list.length ? `<section class="conf"><h2>${c} Standings</h2>${list.map(table).join("")}</section>` : "";
+  }).join("");
 }
 
 // ---------- Power Rankings ----------
@@ -414,11 +463,11 @@ for (const [id, key] of [["picksOnly", "mp.picksOnly"], ["expand", "mp.expand"]]
 }
 
 function showView(){
-  const rankings = location.hash === "#rankings";
-  $("viewRankings").hidden = !rankings;
-  $("viewMatchup").hidden = rankings;
-  $("tabRankings").classList.toggle("on", rankings);
-  $("tabMatchup").classList.toggle("on", !rankings);
+  const view = {"#rankings": "Rankings", "#division": "Division"}[location.hash] || "Matchup";
+  for (const v of ["Matchup", "Rankings", "Division"]){
+    $("view" + v).hidden = v !== view;
+    $("tab" + v).classList.toggle("on", v === view);
+  }
 }
 window.addEventListener("hashchange", showView);
 showView();
