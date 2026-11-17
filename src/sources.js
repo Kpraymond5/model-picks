@@ -3,8 +3,9 @@ import { BY_ESPN, BY_FULL } from "./teams.js";
 
 const decode = s => s.replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
 
-// TeamRankings stat or ranking page -> [{rank, team, record}]
+// TeamRankings stat or ranking page -> [{rank, team, record, value}]
 // Uses the first table on the page; rank is TeamRankings' own (1 = best, ties share a rank).
+// value is the current-season column as shown on the page (e.g. "6.7", "52.00%", "34:31").
 export function parseTeamRankings(html) {
   const start = html.indexOf("<tbody");
   if (start < 0) throw new Error("TeamRankings page has no table");
@@ -12,10 +13,11 @@ export function parseTeamRankings(html) {
   const out = [];
   for (const row of body.split(/<tr[\s>]/).slice(1)) {
     const rank = row.match(/<td class="rank[^"]*"[^>]*>\s*(\d+)\s*<\/td>/);
-    const cells = [...row.matchAll(/<td[^>]*data-sort="([^"]*)"[^>]*>/g)];
+    const cells = [...row.matchAll(/<td[^>]*data-sort="([^"]*)"[^>]*>([\s\S]*?)<\/td>/g)];
     if (!rank || cells.length < 2) continue;
     const record = row.match(/<small>\s*\(([^)]*)\)\s*<\/small>/);
-    out.push({ rank: Number(rank[1]), team: decode(cells[1][1]), record: record ? record[1] : null });
+    const value = cells[2] ? decode(cells[2][2].replace(/<[^>]*>/g, "")) : null;
+    out.push({ rank: Number(rank[1]), team: decode(cells[1][1]), record: record ? record[1] : null, value });
   }
   return out;
 }

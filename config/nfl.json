@@ -31,5 +31,18 @@
     { "key": "fgPct",            "label": "Field goal %",          "source": "stat/field-goal-conversion-pct",                    "w1": 0.24, "w2": 0.015 },
     { "key": "sos",              "label": "Strength of schedule",  "source": "ranking/sos-basic-by-other",                        "w1": 0.75, "w2": 0.175 },
     { "key": "qbr",              "label": "QBR",                   "source": "espn-qbr",                                          "w1": 0.47, "w2": 0.065 }
+  ],
+  "displayStats": [
+    { "key": "passYds",      "source": "stat/passing-yards-per-game" },
+    { "key": "passAtt",      "source": "stat/pass-attempts-per-game" },
+    { "key": "rushYds",      "source": "stat/rushing-yards-per-game" },
+    { "key": "rushAtt",      "source": "stat/rushing-attempts-per-game" },
+    { "key": "oppPassYds",   "source": "stat/opponent-passing-yards-per-game" },
+    { "key": "oppPassAtt",   "source": "stat/opponent-pass-attempts-per-game" },
+    { "key": "oppRushYds",   "source": "stat/opponent-rushing-yards-per-game" },
+    { "key": "oppRushAtt",   "source": "stat/opponent-rushing-attempts-per-game" },
+    { "key": "plays",        "source": "stat/plays-per-game" },
+    { "key": "oppPlays",     "source": "stat/opponent-plays-per-game" },
+    { "key": "timeOfPoss",   "source": "stat/average-time-of-possession-net-of-ot" }
   ]
 }
