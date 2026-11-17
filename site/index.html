@@ -90,7 +90,7 @@ td.delta b{font-family:var(--display);font-size:1.1rem}
 .divwrap{display:flex;flex-direction:column;gap:22px}
 .conf h2{font-family:var(--display);font-weight:700;font-size:1.7rem;margin:0 0 10px;line-height:1}
 .conf{display:flex;flex-direction:column;gap:14px}
-table.dv{table-layout:fixed;width:950px;min-width:0}
+table.dv{table-layout:fixed;width:1030px;min-width:0}
 table.dv th.dname{font-size:1.05rem;color:var(--fg);text-align:left}
 .divwrap .board{width:fit-content;max-width:100%}
 table.dv .pb{left:0}
@@ -108,8 +108,8 @@ th.sortable{cursor:pointer;user-select:none}
 th.sortable:hover,th.sorted{color:var(--fg)}
 th.sortable:focus-visible{outline:2px solid var(--turf);outline-offset:-2px}
 th .arrow{font-size:.7em;margin-left:3px}
-th.off{background:var(--q2);color:var(--q-ink)}
-th.def{background:var(--q3);color:var(--q-ink)}
+th.off{background:#2c5d8f;color:#ffffff}
+th.def{background:#5b4a86;color:#ffffff}
 td.v{color:var(--muted)}
 th.sub{font-family:var(--body);font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
 th.st{text-align:center;border-left:1px solid var(--line);border-bottom:0;padding-bottom:0}
@@ -252,12 +252,12 @@ function renderDivisions(){
   const odds = v => v == null ? null : (/^[+-]/.test(v) ? v : (Number(v) > 0 ? "+" + v : v));
   const table = d => `<div class="board"><table class="dv">
     <colgroup><col style="width:160px"><col style="width:110px"><col style="width:90px"><col style="width:90px">
-      <col style="width:100px"><col style="width:70px"><col style="width:150px"><col style="width:90px"><col style="width:90px"></colgroup>
+      <col style="width:100px"><col style="width:70px"><col style="width:150px"><col style="width:90px"><col style="width:90px"><col style="width:80px"></colgroup>
     <thead>
       <tr><th class="dname pb l" rowspan="2">${esc(d.name)}</th>
         <th class="c" rowspan="2">Overall W-L</th><th class="c" rowspan="2">Div W-L</th><th class="c" rowspan="2">Odds</th>
         <th class="c gl" rowspan="2">Model rank</th><th class="c gl" rowspan="2">QBR</th><th class="l" rowspan="2">QB</th>
-        <th class="c off gl">Offense</th><th class="c def gl">Defense</th></tr>
+        <th class="c off gl">Offense</th><th class="c def gl">Defense</th><th class="c gl" rowspan="2" title="Strength of schedule rank (1 = hardest)">SoS</th></tr>
       <tr><th class="c off gl sub">Rank</th><th class="c def gl sub">Rank</th></tr>
     </thead>
     <tbody>${d.teams.map(t => `<tr>
@@ -269,7 +269,8 @@ function renderDivisions(){
       ${qbrCell(t, "gl")}
       ${cell(t.qb, "l")}
       ${cell(t.offYppRank, "c gl " + q(t.offYppRank))}
-      ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}</tr>`).join("")}</tbody>
+      ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}
+      ${cell(t.sosRank, "c gl " + q(t.sosRank))}</tr>`).join("")}</tbody>
   </table></div>`;
   wrap.innerHTML = ["AFC", "NFC"].map(c => {
     const list = divs.filter(d => d.conference === c);
