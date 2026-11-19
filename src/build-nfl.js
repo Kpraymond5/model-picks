@@ -1,38 +1,32 @@
 // Builds the NFL output (power rankings + this week's games). No file or env access here,
 // so the same code runs in Node (src/run-nfl.js) and in a browser for testing.
-import { TEAM_NAMES } from "./teams.js";
-import { parseTeamRankings, parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason,
+import { TEAM_NAMES, BY_ESPN } from "./teams.js";
+import { parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason, espnTeamsUrl, parseEspnTeams,
          standingsUrl, parseStandings, futuresUrl, parseDivisionOdds } from "./sources.js";
+import { loadSeasonGames, teamStats } from "./espn-stats.js";
 import { powerRankings, evaluateGame } from "./model.js";
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[%,]/g, "")); return Number.isFinite(n) ? n : null; };
 const ratio = (a, b, digits) => (a == null || !b) ? null : (a / b).toFixed(digits);
 const round = (x, d) => Math.round(x * 10 ** d) / 10 ** d;
 
 // get(url, "text" | "json") fetches with retries; manualGames is used when there is no odds key.
-export async function buildNfl({ config, get, oddsKey = null, manualGames = null, now = new Date(), log = console.log, pause = 1500 }) {
-  const stats = Object.fromEntries(TEAM_NAMES.map(t => [t, {}]));   // team -> key -> {r, v}
-  const info = Object.fromEntries(TEAM_NAMES.map(t => [t, { record: null, qb: null }]));
+// gameCache: box scores already read in earlier runs (updated in place).
+export async function buildNfl({ config, get, oddsKey = null, manualGames = null, gameCache = {}, now = new Date(), log = console.log }) {
+  const season = nflSeason(now);
 
-  // 1. TeamRankings pages: model stats first, then display-only stats
-  const pages = [...config.stats.filter(s => s.source !== "espn-qbr"), ...(config.displayStats || [])];
-  for (const page of pages) {
-    const rows = parseTeamRankings(await get(`https://www.teamrankings.com/nfl/${page.source}`, "text"));
-    for (const row of rows) {
-      if (!stats[row.team]) continue;
-      stats[row.team][page.key] = { r: row.rank, v: row.value };
-      if (page.key === "sos" && row.record) info[row.team].record = row.record;
-    }
-    const missing = TEAM_NAMES.filter(t => !stats[t][page.key]);
-    if (missing.length) throw new Error(`${page.source} is missing ${missing.join(", ")}`);
-    log(`ok  ${page.source}`);
-    if (pause) await sleep(pause);
-  }
-  for (const t of TEAM_NAMES) stats[t].sos.v = null; // the SoS "value" is a rating, not shown
+  // 1. Team stats from ESPN box scores, ranked 1-32 (1 = best)
+  const idByTeam = {};
+  for (const e of parseEspnTeams(await get(espnTeamsUrl("nfl"), "json"))) if (BY_ESPN[e.abbr]) idByTeam[BY_ESPN[e.abbr]] = e.id;
+  const missingIds = TEAM_NAMES.filter(t => !idByTeam[t]);
+  if (missingIds.length) throw new Error(`ESPN teams list is missing ${missingIds.join(", ")}`);
+  const played = await loadSeasonGames({ league: "nfl", season, weeks: 18, get, cache: gameCache, log });
+  const ts = teamStats(played, Object.values(idByTeam));
+  const stats = Object.fromEntries(TEAM_NAMES.map(t => [t, ts.stats[idByTeam[t]]]));
+  const info = Object.fromEntries(TEAM_NAMES.map(t => [t, { record: ts.record[idByTeam[t]], qb: null }]));
+  log(`ok  team stats from ${played.length} games`);
 
   // 2. ESPN QBR (rank among qualified passers)
-  const season = nflSeason(now);
   for (const row of parseQbr(await get(qbrUrl(season), "json"))) {
     stats[row.team].qbr = { r: row.rank, v: null };
     info[row.team].qb = row.qb;
@@ -91,6 +85,9 @@ export async function buildNfl({ config, get, oddsKey = null, manualGames = null
   });
 
   return {
+    sport: "nfl",
+    teamCount: 32,
+    statsSource: "ESPN box scores",
     generatedAt: now.toISOString(),
     season,
     gamesSource,

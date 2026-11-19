@@ -89,7 +89,8 @@ export function espnTeamsUrl(league) {
   return `https://site.api.espn.com/apis/site/v2/sports/football/${league}/teams?limit=1000`;
 }
 export function parseEspnTeams(json) {
-  return (json.sports?.[0]?.leagues?.[0]?.teams || []).map(({ team: t }) => ({ id: String(t.id), slug: t.slug, name: t.displayName }));
+  return (json.sports?.[0]?.leagues?.[0]?.teams || []).map(({ team: t }) =>
+    ({ id: String(t.id), slug: t.slug, name: t.displayName, short: t.shortDisplayName, abbr: t.abbreviation }));
 }
 
 // ESPN futures (DraftKings) -> { team: "+750" } for division- (or conference-) winner markets
