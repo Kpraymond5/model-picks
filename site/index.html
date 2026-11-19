@@ -252,14 +252,15 @@ function renderDivisions(){
   const wrap = $("divWrap");
   if (!divs.length){ wrap.innerHTML = `<p class="none">Standings aren't available yet. They appear after the next update run.</p>`; return; }
   const odds = v => v == null ? null : (/^[+-]/.test(v) ? v : (Number(v) > 0 ? "+" + v : v));
-  const table = d => `<div class="board"><table class="dv">
+  const rem = divs.some(d => d.teams.some(t => t.remSosRank != null));
+  const table = d => `<div class="board"><table class="dv" style="width:${rem ? 1120 : 1030}px">
     <colgroup><col style="width:160px"><col style="width:110px"><col style="width:90px"><col style="width:90px">
-      <col style="width:100px"><col style="width:70px"><col style="width:150px"><col style="width:90px"><col style="width:90px"><col style="width:80px"></colgroup>
+      <col style="width:100px"><col style="width:70px"><col style="width:150px"><col style="width:90px"><col style="width:90px"><col style="width:80px">${rem ? `<col style="width:90px">` : ""}</colgroup>
     <thead>
       <tr><th class="dname pb l" rowspan="2">${esc(d.name)}</th>
         <th class="c" rowspan="2">Overall W-L</th><th class="c" rowspan="2">${esc(data.groupRecordLabel || "Div W-L")}</th><th class="c" rowspan="2">Odds</th>
         <th class="c gl" rowspan="2">Model rank</th><th class="c gl" rowspan="2">QBR</th><th class="l" rowspan="2">QB</th>
-        <th class="c off gl">Offense</th><th class="c def gl">Defense</th><th class="c gl" rowspan="2" title="Strength of schedule rank (1 = hardest)">SoS</th></tr>
+        <th class="c off gl">Offense</th><th class="c def gl">Defense</th><th class="c gl" rowspan="2" title="Strength of schedule rank (1 = hardest)">SoS</th>${rem ? `<th class="c gl" rowspan="2" title="Remaining strength of schedule rank (1 = hardest)">Rem SoS</th>` : ""}</tr>
       <tr><th class="c off gl sub">Rank</th><th class="c def gl sub">Rank</th></tr>
     </thead>
     <tbody>${d.teams.map(t => `<tr>
@@ -272,7 +273,8 @@ function renderDivisions(){
       ${cell(t.qb, "l")}
       ${cell(t.offYppRank, "c gl " + q(t.offYppRank))}
       ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}
-      ${cell(t.sosRank, "c gl " + q(t.sosRank))}</tr>`).join("")}</tbody>
+      ${cell(t.sosRank, "c gl " + q(t.sosRank))}
+      ${rem ? cell(t.remSosRank, "c gl " + q(t.remSosRank)) : ""}</tr>`).join("")}</tbody>
   </table></div>`;
   wrap.innerHTML = [...new Set(divs.map(d => d.conference))].map(c => {
     const list = divs.filter(d => d.conference === c);

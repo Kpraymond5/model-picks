@@ -1,6 +1,6 @@
 // Builds the college football output, ported from the colfoot sheet ("Power Rankings" and "Week V").
 // Team stats come from ESPN box scores. Same output shape as build-nfl.js so the site renders both alike.
-import { parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason, slugify,
+import { parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason, slugify, fpiUrl, parseFpi,
          espnTeamsUrl, parseEspnTeams, standingsUrl, parseCollegeStandings, futuresUrl, parseDivisionOdds } from "./sources.js";
 import { loadSeasonGames, teamStats } from "./espn-stats.js";
 import { powerRankings, evaluateGame } from "./model.js";
@@ -36,6 +36,18 @@ export async function buildCfb({ config, get, oddsKey = null, gameCache = {}, no
   const stats = Object.fromEntries(teams.map(t => [t, ts.stats[idOf[t]]]));
   const info = Object.fromEntries(teams.map(t => [t, { record: ts.record[idOf[t]], qb: null }]));
   log(`ok  team stats from ${played.length} games`);
+  // Strength of schedule: ESPN FPI's SOS rank (past schedule) and remaining-SoS rank.
+  // A team FPI doesn't list keeps the box-score SoS; with no SoS at all it gets the sheet's 70.
+  const remSos = {};
+  try {
+    const fpi = parseFpi(await get(fpiUrl(season, league), "json"), t => byEspnId[String(t?.id)]);
+    let n = 0;
+    for (const t of teams) {
+      if (fpi[t]?.sos) { stats[t].sos = { r: fpi[t].sos, v: null }; n++; }
+      remSos[t] = fpi[t]?.remSos ?? null;
+    }
+    log(`ok  ESPN FPI strength of schedule (${n} of ${N} teams)`);
+  } catch (e) { log(`warn FPI: ${e.message} (using box-score SoS)`); }
   for (const t of teams) if (stats[t].sos.r == null) stats[t].sos = { r: config.sosMissingRank, v: null };
 
   // 3. ESPN college QBR (rank among qualified passers); no qualified passer -> the sheet's 68.
@@ -89,6 +101,7 @@ export async function buildCfb({ config, get, oddsKey = null, gameCache = {}, no
     name, modelRank: modelRank[name], record: info[name].record, qb: info[name].qb,
     qbr: stats[name].qbr.assumed ? null : stats[name].qbr.r, qbrAssumed: !!stats[name].qbr.assumed,
     offYppRank: stats[name].yardsPerPlay.r, defYppRank: stats[name].oppYardsPerPlay.r, sosRank: stats[name].sos.r,
+    remSosRank: remSos[name] ?? null,
   });
 
   return {

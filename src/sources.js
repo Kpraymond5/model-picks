@@ -84,6 +84,25 @@ export function parseCollegeStandings(json, teamByEspnId) {
   return out;
 }
 
+// ESPN FPI -> { team: { sos, remSos } }: past strength-of-schedule rank and remaining SoS rank (1 = hardest)
+export function fpiUrl(season, league = "nfl") {
+  return `https://site.web.api.espn.com/apis/fitt/v3/sports/football/${league}/powerindex?region=us&lang=en&limit=500&season=${season}`;
+}
+// The SoS columns live in the "fpi" category for the NFL and in "resume" for college.
+export function parseFpi(json, resolve) {
+  const cat = (json.categories || []).find(c => c.names?.includes("avgsosrank"));
+  const iSos = cat?.names?.indexOf("avgsosrank") ?? -1, iRem = cat?.names?.indexOf("sosremainingrank") ?? -1;
+  if (iSos < 0) throw new Error("FPI feed has no SoS column");
+  const out = {};
+  for (const t of json.teams || []) {
+    const team = resolve(t.team);
+    const vals = t.categories?.find(c => c.name === cat.name)?.values || [];
+    const rank = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null;
+    if (team) out[team] = { sos: rank(vals[iSos]), remSos: iRem >= 0 ? rank(vals[iRem]) : null };
+  }
+  return out;
+}
+
 // ESPN teams list -> [{id, slug, name}]
 export function espnTeamsUrl(league) {
   return `https://site.api.espn.com/apis/site/v2/sports/football/${league}/teams?limit=1000`;

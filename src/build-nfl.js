@@ -1,7 +1,7 @@
 // Builds the NFL output (power rankings + this week's games). No file or env access here,
 // so the same code runs in Node (src/run-nfl.js) and in a browser for testing.
 import { TEAM_NAMES, BY_ESPN } from "./teams.js";
-import { parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason, espnTeamsUrl, parseEspnTeams,
+import { parseQbr, qbrUrl, parseOdds, oddsUrl, weekWindow, nflSeason, espnTeamsUrl, parseEspnTeams, fpiUrl, parseFpi,
          standingsUrl, parseStandings, futuresUrl, parseDivisionOdds } from "./sources.js";
 import { loadSeasonGames, teamStats } from "./espn-stats.js";
 import { powerRankings, evaluateGame } from "./model.js";
@@ -25,6 +25,19 @@ export async function buildNfl({ config, get, oddsKey = null, manualGames = null
   const stats = Object.fromEntries(TEAM_NAMES.map(t => [t, ts.stats[idByTeam[t]]]));
   const info = Object.fromEntries(TEAM_NAMES.map(t => [t, { record: ts.record[idByTeam[t]], qb: null }]));
   log(`ok  team stats from ${played.length} games`);
+
+  // Strength of schedule: ESPN FPI's SOS rank (past schedule) and remaining-SoS rank.
+  // If FPI is unavailable, SoS falls back to the box-score rating (SRS) computed above.
+  const remSos = {};
+  try {
+    const fpi = parseFpi(await get(fpiUrl(season), "json"), t => BY_ESPN[t?.abbreviation]);
+    let n = 0;
+    for (const t of TEAM_NAMES) {
+      if (fpi[t]?.sos) { stats[t].sos = { r: fpi[t].sos, v: null }; n++; }
+      remSos[t] = fpi[t]?.remSos ?? null;
+    }
+    log(`ok  ESPN FPI strength of schedule (${n} teams)`);
+  } catch (e) { log(`warn FPI: ${e.message} (using box-score SoS)`); }
 
   // 2. ESPN QBR (rank among qualified passers)
   for (const row of parseQbr(await get(qbrUrl(season), "json"))) {
@@ -82,6 +95,7 @@ export async function buildNfl({ config, get, oddsKey = null, manualGames = null
     name, modelRank: modelRank[name], record: info[name].record, qb: info[name].qb,
     qbr: stats[name].qbr.assumed ? null : stats[name].qbr.r, qbrAssumed: !!stats[name].qbr.assumed,
     offYppRank: stats[name].yardsPerPlay.r, defYppRank: stats[name].oppYardsPerPlay.r, sosRank: stats[name].sos.r,
+    remSosRank: remSos[name] ?? null,
   });
 
   return {
