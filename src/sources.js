@@ -1,9 +1,13 @@
 // Parsers for each outside data source. Pure functions: text/JSON in, rows out.
 import { BY_ESPN, BY_FULL } from "./teams.js";
 
-const decode = s => s.replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
+const decode = s => s.replace(/&amp;/g, "&").replace(/&#0?39;/g, "'").replace(/&quot;/g, '"').trim();
 
-// TeamRankings stat or ranking page -> [{rank, team, record, value}]
+// Name -> URL-style key, e.g. "San José State Spartans" -> "san-jose-state-spartans"
+export const slugify = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .replace(/&/g, "").replace(/[()'.]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// TeamRankings stat or ranking page -> [{rank, team, slug, record, value}]
 // Uses the first table on the page; rank is TeamRankings' own (1 = best, ties share a rank).
 // value is the current-season column as shown on the page (e.g. "6.7", "52.00%", "34:31").
 export function parseTeamRankings(html) {
@@ -17,20 +21,21 @@ export function parseTeamRankings(html) {
     if (!rank || cells.length < 2) continue;
     const record = row.match(/<small>\s*\(([^)]*)\)\s*<\/small>/);
     const value = cells[2] ? decode(cells[2][2].replace(/<[^>]*>/g, "")) : null;
-    out.push({ rank: Number(rank[1]), team: decode(cells[1][1]), record: record ? record[1] : null, value });
+    const slug = cells[1][2].match(/\/team\/([^"/?#]+)/)?.[1] ?? null;
+    out.push({ rank: Number(rank[1]), team: decode(cells[1][1]), slug, record: record ? record[1] : null, value });
   }
   return out;
 }
 
 // ESPN season QBR (qualified passers, sorted best first) -> [{rank, team, qb}]
-export function qbrUrl(season) {
-  return "https://site.web.api.espn.com/apis/fitt/v3/sports/football/nfl/qbr" +
-    `?region=us&lang=en&qbrType=seasons&seasonType=2&isqualified=true&sort=schedAdjQBR%3Adesc&limit=100&season=${season}`;
+export function qbrUrl(season, league = "nfl") {
+  return `https://site.web.api.espn.com/apis/fitt/v3/sports/football/${league}/qbr` +
+    `?region=us&lang=en&qbrType=seasons&seasonType=2&isqualified=true&sort=schedAdjQBR%3Adesc&limit=300&season=${season}`;
 }
-export function parseQbr(json) {
+export function parseQbr(json, resolve = a => BY_ESPN[a.athlete?.teamShortName]) {
   const out = [], seen = new Set();
   (json.athletes || []).forEach((a, i) => {
-    const team = BY_ESPN[a.athlete?.teamShortName];
+    const team = resolve(a);
     if (!team || seen.has(team)) return; // a team's best-ranked passer only
     seen.add(team);
     out.push({ rank: i + 1, team, qb: a.athlete.shortName || a.athlete.displayName });
@@ -39,8 +44,8 @@ export function parseQbr(json) {
 }
 
 // ESPN standings -> [{team, espnId, conference, division, overall, divRecord, seed}]
-export function standingsUrl(season) {
-  return `https://site.api.espn.com/apis/v2/sports/football/nfl/standings?season=${season}&level=3`;
+export function standingsUrl(season, league = "nfl", extra = "&level=3") {
+  return `https://site.api.espn.com/apis/v2/sports/football/${league}/standings?season=${season}${extra}`;
 }
 export function parseStandings(json) {
   const out = [];
@@ -62,14 +67,39 @@ export function parseStandings(json) {
   return out;
 }
 
-// ESPN futures (DraftKings) -> { team: "+750" } for division-winner markets
-export function futuresUrl(season) {
-  return `https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/${season}/futures?limit=100`;
+// ESPN college standings -> [{team, espnId, conference, overall, confRecord}], in ESPN's standings order.
+// "conference" is the group that has teams (e.g. "SEC", or "Sun Belt - East" where a conference has divisions).
+export function parseCollegeStandings(json, teamByEspnId) {
+  const out = [];
+  const walk = g => {
+    for (const e of g.standings?.entries || []) {
+      const team = teamByEspnId[String(e.team?.id)];
+      if (!team) continue;
+      const stat = name => e.stats?.find(s => s.name === name)?.displayValue ?? null;
+      out.push({ team, espnId: String(e.team.id), conference: g.name, overall: stat("overall"), confRecord: stat("vs. Conf.") });
+    }
+    for (const c of g.children || []) walk(c);
+  };
+  walk(json);
+  return out;
 }
-export function parseDivisionOdds(json, teamByEspnId) {
+
+// ESPN teams list -> [{id, slug, name}]
+export function espnTeamsUrl(league) {
+  return `https://site.api.espn.com/apis/site/v2/sports/football/${league}/teams?limit=1000`;
+}
+export function parseEspnTeams(json) {
+  return (json.sports?.[0]?.leagues?.[0]?.teams || []).map(({ team: t }) => ({ id: String(t.id), slug: t.slug, name: t.displayName }));
+}
+
+// ESPN futures (DraftKings) -> { team: "+750" } for division- (or conference-) winner markets
+export function futuresUrl(season, league = "nfl") {
+  return `https://sports.core.api.espn.com/v2/sports/football/leagues/${league}/seasons/${season}/futures?limit=200`;
+}
+export function parseDivisionOdds(json, teamByEspnId, isMarket = item => item.type === "winDivision") {
   const odds = {};
   for (const item of json.items || []) {
-    if (item.type !== "winDivision") continue;
+    if (!isMarket(item)) continue;
     for (const b of item.futures?.[0]?.books || []) {
       const id = b.team?.$ref?.match(/teams\/(\d+)/)?.[1];
       const team = teamByEspnId[id];
@@ -80,16 +110,18 @@ export function parseDivisionOdds(json, teamByEspnId) {
 }
 
 // The Odds API v4 events -> [{kickoff, away, home, homeSpread, total, awayMl, homeMl, book}]
-export function oddsUrl(apiKey) {
-  return "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds" +
+export function oddsUrl(apiKey, sport = "americanfootball_nfl") {
+  return `https://api.the-odds-api.com/v4/sports/${sport}/odds` +
     `?apiKey=${encodeURIComponent(apiKey)}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 }
-export function parseOdds(events, { bookmaker, from, until }) {
+// resolve: The Odds API team name -> our team name (or undefined to skip the game)
+export function parseOdds(events, { bookmaker, from, until, resolve = name => BY_FULL[name], unmatched = null }) {
   const games = [];
   for (const ev of events) {
     const kickoff = new Date(ev.commence_time);
     if (kickoff < from || kickoff >= until) continue;
-    const home = BY_FULL[ev.home_team], away = BY_FULL[ev.away_team];
+    const home = resolve(ev.home_team), away = resolve(ev.away_team);
+    if (unmatched) { if (!home) unmatched.add(ev.home_team); if (!away) unmatched.add(ev.away_team); }
     if (!home || !away) continue;
     const books = ev.bookmakers || [];
     const book = books.find(b => b.key === bookmaker) || books[0];

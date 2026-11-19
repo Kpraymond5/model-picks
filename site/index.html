@@ -31,8 +31,11 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 .banner p{margin:4px 0 0;opacity:.85;font-size:.85rem}
 .shell{display:grid;grid-template-columns:120px minmax(0,1fr);min-height:60vh}
 .rail{background:var(--head);border-right:1px solid var(--line);padding-block:12px;display:flex;flex-direction:column;gap:2px}
-.rail span{padding:10px 14px;font-family:var(--display);font-weight:600;font-size:1.05rem;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;color:var(--muted)}
-.rail span.on{background:var(--surface);color:var(--turf);border-left:3px solid var(--turf);padding-left:11px}
+.rail span,.rail a{padding:10px 14px;font-family:var(--display);font-weight:600;font-size:1.05rem;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;color:var(--muted);text-decoration:none}
+.rail a{color:var(--fg)}
+.rail a:hover{background:var(--surface)}
+.rail a:focus-visible{outline:2px solid var(--turf);outline-offset:-2px}
+.rail a.on{background:var(--surface);color:var(--turf);border-left:3px solid var(--turf);padding-left:11px}
 .rail small{font-family:var(--body);font-size:.65rem;font-weight:500;letter-spacing:.04em;text-transform:uppercase;opacity:.8}
 main{min-width:0;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
 .tabs{display:flex;gap:22px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
@@ -117,8 +120,8 @@ td.gl,th.gl{border-left:4px solid var(--surface)}
 @media (max-width:640px){
   .shell{grid-template-columns:1fr}
   .rail{flex-direction:row;overflow-x:auto;padding:0;border-right:0;border-bottom:1px solid var(--line)}
-  .rail span{gap:6px}
-  .rail span.on{border-left:0;border-bottom:3px solid var(--turf);padding-left:14px}
+  .rail span,.rail a{gap:6px}
+  .rail a.on{border-left:0;border-bottom:3px solid var(--turf);padding-left:14px}
   .banner h1{font-size:2rem}
   .fz0,.fz2,.fz3,thead tr.grp th.fz{position:static;box-shadow:none}
   .fz1{left:0;box-shadow:inset -1px 0 0 var(--line),6px 0 6px -4px var(--freeze-shadow)}
@@ -133,8 +136,8 @@ td.gl,th.gl{border-left:4px solid var(--surface)}
 
 <div class="shell">
   <nav class="rail" aria-label="Sports">
-    <span class="on" aria-current="page">NFL</span>
-    <span>CFB <small>Soon</small></span>
+    <a href="#nfl" id="sport-nfl" class="on" aria-current="page">NFL</a>
+    <a href="#cfb" id="sport-cfb">CFB</a>
     <span>NBA <small>Soon</small></span>
     <span>CBB <small>Soon</small></span>
     <span>MLB <small>Soon</small></span>
@@ -142,9 +145,9 @@ td.gl,th.gl{border-left:4px solid var(--surface)}
 
   <main>
     <nav class="tabs" aria-label="Views">
-      <a href="#matchup" id="tabMatchup" class="on">Match-up</a>
-      <a href="#rankings" id="tabRankings">Power Rankings</a>
-      <a href="#division" id="tabDivision">Division Rank</a>
+      <a href="#nfl" id="tabMatchup" class="on">Match-up</a>
+      <a href="#nfl-rankings" id="tabRankings">Power Rankings</a>
+      <a href="#nfl-division" id="tabDivision">Division Rank</a>
     </nav>
 
     <div id="msg" class="notice" hidden></div>
@@ -219,7 +222,8 @@ let data = null;
 
 function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function signed(n){ return n == null ? "–" : n > 0 ? "+" + n : String(n); }
-function q(n){ return n == null || n < 1 ? "" : "q" + Math.min(5, Math.ceil(n / 6.4)); }
+// Quintile of a rank among this sport's teams (32 in the NFL, about 138 in FBS)
+function q(n){ return n == null || n < 1 ? "" : "q" + Math.min(5, Math.ceil(n / ((data?.teamCount || 32) / 5))); }
 function cell(v, cls){ return `<td class="${cls || ""}${v == null ? " na" : ""}">${esc(v ?? "–")}</td>`; }
 function kickoff(iso){
   const d = new Date(iso);
@@ -253,7 +257,7 @@ function renderDivisions(){
       <col style="width:100px"><col style="width:70px"><col style="width:150px"><col style="width:90px"><col style="width:90px"><col style="width:80px"></colgroup>
     <thead>
       <tr><th class="dname pb l" rowspan="2">${esc(d.name)}</th>
-        <th class="c" rowspan="2">Overall W-L</th><th class="c" rowspan="2">Div W-L</th><th class="c" rowspan="2">Odds</th>
+        <th class="c" rowspan="2">Overall W-L</th><th class="c" rowspan="2">${esc(data.groupRecordLabel || "Div W-L")}</th><th class="c" rowspan="2">Odds</th>
         <th class="c gl" rowspan="2">Model rank</th><th class="c gl" rowspan="2">QBR</th><th class="l" rowspan="2">QB</th>
         <th class="c off gl">Offense</th><th class="c def gl">Defense</th><th class="c gl" rowspan="2" title="Strength of schedule rank (1 = hardest)">SoS</th></tr>
       <tr><th class="c off gl sub">Rank</th><th class="c def gl sub">Rank</th></tr>
@@ -270,7 +274,7 @@ function renderDivisions(){
       ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}
       ${cell(t.sosRank, "c gl " + q(t.sosRank))}</tr>`).join("")}</tbody>
   </table></div>`;
-  wrap.innerHTML = ["AFC", "NFC"].map(c => {
+  wrap.innerHTML = [...new Set(divs.map(d => d.conference))].map(c => {
     const list = divs.filter(d => d.conference === c);
     return list.length ? `<section class="conf"><h2>${c} Standings</h2>${list.map(table).join("")}</section>` : "";
   }).join("");
@@ -461,20 +465,62 @@ for (const [id, key] of [["picksOnly", "mp.picksOnly"], ["expand", "mp.expand"]]
   });
 }
 
+// Address: #<sport>[-rankings|-division], e.g. #cfb-rankings. Old links (#rankings, #division) mean NFL.
+const SPORTS = ["nfl", "cfb"];
+const cache = {};
+let currentSport = null;
+
+function route(){
+  const h = location.hash.replace(/^#/, "");
+  const [a, b] = h.split("-");
+  const sport = SPORTS.includes(a) ? a : "nfl";
+  const sub = SPORTS.includes(a) ? b : a;
+  const view = {rankings: "Rankings", division: "Division"}[sub] || "Matchup";
+  return {sport, view};
+}
+
 function showView(){
-  const view = {"#rankings": "Rankings", "#division": "Division"}[location.hash] || "Matchup";
+  const {sport, view} = route();
   for (const v of ["Matchup", "Rankings", "Division"]){
     $("view" + v).hidden = v !== view;
     $("tab" + v).classList.toggle("on", v === view);
   }
+  $("tabMatchup").href = "#" + sport;
+  $("tabRankings").href = `#${sport}-rankings`;
+  $("tabDivision").href = `#${sport}-division`;
+  for (const s of SPORTS){
+    const a = $("sport-" + s);
+    a.classList.toggle("on", s === sport);
+    if (s === sport) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  }
+  if (sport !== currentSport) loadSport(sport);
 }
+
+function loadSport(sport){
+  currentSport = sport;
+  $("msg").hidden = true;
+  if (cache[sport]) { data = cache[sport]; prSort = {id: "modelRank", dir: 1}; render(); return; }
+  fetch(`data/${sport}.json`, {cache: "no-cache"})
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(d => {
+      cache[sport] = d;
+      if (currentSport !== sport) return;
+      data = d; prSort = {id: "modelRank", dir: 1}; render();
+      if (!d.games.length && d.gamesSource === "none") notice("No lines source set", "Add an ODDS_API_KEY secret so the job can load this week's games.");
+    })
+    .catch(() => { if (currentSport === sport) { data = null; clearTables(); notice("No picks yet", `The update job hasn't produced ${sport.toUpperCase()} data yet. Run the Update picks workflow on GitHub, then reload.`); } });
+}
+
+function clearTables(){
+  $("muTable").querySelectorAll("tbody").forEach(b => b.remove());
+  $("prTable").innerHTML = "";
+  $("divWrap").innerHTML = "";
+  for (const id of ["sGames", "sPicks", "sEdge"]) $(id).textContent = "–";
+  document.querySelectorAll(".stamp").forEach(s => s.textContent = "");
+}
+
 window.addEventListener("hashchange", showView);
 showView();
-
-fetch("data/nfl.json", {cache: "no-cache"})
-  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(d => { data = d; render(); if (!d.games.length && d.gamesSource === "none") notice("No lines source set", "Add an ODDS_API_KEY secret or a data/nfl-games.json file so the job can load this week's games."); })
-  .catch(() => notice("No picks yet", "The update job hasn't produced data yet. Run the Update picks workflow on GitHub, then reload."));
 </script>
 </body>
 </html>

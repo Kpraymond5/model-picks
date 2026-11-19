@@ -20,8 +20,10 @@ export function powerRankings(ranksByTeam, config) {
 // Model line is the home team's spread: negative means the home team is favored.
 // Week V: line = (home rank - away rank) * lineFactor + homeField
 //         delta = |line - book home spread|; pick when delta clears the threshold.
+// College variant: a bigger factor (lineFactorTop) when either team is ranked topN or better.
 export function evaluateGame(homeRank, awayRank, homeSpread, config) {
-  const line = (homeRank - awayRank) * config.lineFactor + config.homeField;
+  const top = config.lineFactorTop != null && Math.min(homeRank, awayRank) <= config.topN;
+  const line = (homeRank - awayRank) * (top ? config.lineFactorTop : config.lineFactor) + config.homeField;
   if (homeSpread == null) return { line, delta: null, pick: null };
   const delta = Math.abs(line - homeSpread);
   let pick = null;
