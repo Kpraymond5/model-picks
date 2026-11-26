@@ -2,7 +2,7 @@ name: Update picks
 
 on:
   schedule:
-    - cron: "17 11,23 * * *"  # twice a day (fits The Odds API free tier with NFL + CFB)
+    - cron: "17 11,23 * * *"  # twice a day
   workflow_dispatch:          # "Run workflow" button
   push:
     branches: [main]
@@ -31,6 +31,11 @@ jobs:
       - name: Run CFB model
         continue-on-error: true   # a college failure keeps the last CFB data and still publishes the NFL
         run: node src/run-cfb.js
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      - name: Run CBB model
+        continue-on-error: true   # a basketball failure keeps the last CBB data and still publishes the rest
+        run: node src/run-cbb.js
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       - name: Save results to the repository
