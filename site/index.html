@@ -89,6 +89,7 @@ tbody.g.picked td.time{box-shadow:inset 3px 0 0 var(--pick-bg)}
 td.delta{vertical-align:middle}
 td.delta b{font-family:var(--display);font-size:1.1rem}
 .view{display:flex;flex-direction:column;gap:14px;min-width:0}
+body.noqb .qbc{display:none}
 /* Division Rank */
 .divwrap{display:flex;flex-direction:column;gap:22px}
 .conf h2{font-family:var(--display);font-weight:700;font-size:1.7rem;margin:0 0 10px;line-height:1}
@@ -139,7 +140,7 @@ td.gl,th.gl{border-left:4px solid var(--surface)}
     <a href="#nfl" id="sport-nfl" class="on" aria-current="page">NFL</a>
     <a href="#cfb" id="sport-cfb">CFB</a>
     <span>NBA <small>Soon</small></span>
-    <span>CBB <small>Soon</small></span>
+    <a href="#cbb" id="sport-cbb">CBB</a>
     <span>MLB <small>Soon</small></span>
   </nav>
 
@@ -187,7 +188,7 @@ td.gl,th.gl{border-left:4px solid var(--surface)}
             <th colspan="4" class="fz"></th>
             <th></th>
             <th colspan="3" class="ul">Model</th>
-            <th colspan="4"></th>
+            <th colspan="2"></th><th class="qbc"></th><th class="qbc"></th>
             <th class="ul">Offense</th>
             <th class="ul">Defense</th>
             <th></th>
@@ -203,8 +204,8 @@ td.gl,th.gl{border-left:4px solid var(--surface)}
             <th>Δ</th>
             <th class="c">Record</th>
             <th>Model rank</th>
-            <th class="gap">QBR</th>
-            <th class="l">QB</th>
+            <th class="gap qbc">QBR</th>
+            <th class="l qbc">QB</th>
             <th class="c">Rank</th>
             <th class="c">Rank</th>
             <th class="c">SoS</th>
@@ -241,6 +242,7 @@ function lineText(g){
 function render(){
   const stamp = "Updated " + new Date(data.generatedAt).toLocaleString([], {weekday:"short", hour:"numeric", minute:"2-digit"});
   document.querySelectorAll(".stamp").forEach(s => s.textContent = stamp);
+  document.body.classList.toggle("noqb", data.hasQbr === false);
   renderMatchup();
   renderRankings();
   renderDivisions();
@@ -253,13 +255,15 @@ function renderDivisions(){
   if (!divs.length){ wrap.innerHTML = `<p class="none">Standings aren't available yet. They appear after the next update run.</p>`; return; }
   const odds = v => v == null ? null : (/^[+-]/.test(v) ? v : (Number(v) > 0 ? "+" + v : v));
   const rem = divs.some(d => d.teams.some(t => t.remSosRank != null));
-  const table = d => `<div class="board"><table class="dv" style="width:${rem ? 1120 : 1030}px">
+  const qb = data.hasQbr !== false;
+  const width = 1030 + (rem ? 90 : 0) - (qb ? 0 : 220);
+  const table = d => `<div class="board"><table class="dv" style="width:${width}px">
     <colgroup><col style="width:160px"><col style="width:110px"><col style="width:90px"><col style="width:90px">
-      <col style="width:100px"><col style="width:70px"><col style="width:150px"><col style="width:90px"><col style="width:90px"><col style="width:80px">${rem ? `<col style="width:90px">` : ""}</colgroup>
+      <col style="width:100px">${qb ? `<col style="width:70px"><col style="width:150px">` : ""}<col style="width:90px"><col style="width:90px"><col style="width:80px">${rem ? `<col style="width:90px">` : ""}</colgroup>
     <thead>
       <tr><th class="dname pb l" rowspan="2">${esc(d.name)}</th>
         <th class="c" rowspan="2">Overall W-L</th><th class="c" rowspan="2">${esc(data.groupRecordLabel || "Div W-L")}</th><th class="c" rowspan="2">Odds</th>
-        <th class="c gl" rowspan="2">Model rank</th><th class="c gl" rowspan="2">QBR</th><th class="l" rowspan="2">QB</th>
+        <th class="c gl" rowspan="2">Model rank</th>${qb ? `<th class="c gl" rowspan="2">QBR</th><th class="l" rowspan="2">QB</th>` : ""}
         <th class="c off gl">Offense</th><th class="c def gl">Defense</th><th class="c gl" rowspan="2" title="Strength of schedule rank (1 = hardest)">SoS</th>${rem ? `<th class="c gl" rowspan="2" title="Remaining strength of schedule rank (1 = hardest)">Rem SoS</th>` : ""}</tr>
       <tr><th class="c off gl sub">Rank</th><th class="c def gl sub">Rank</th></tr>
     </thead>
@@ -269,8 +273,8 @@ function renderDivisions(){
       ${cell(t.divRecord, "c")}
       ${cell(odds(t.odds), "c")}
       ${cell(t.modelRank, "c gl " + q(t.modelRank))}
-      ${qbrCell(t, "gl")}
-      ${cell(t.qb, "l")}
+      ${qb ? qbrCell(t, "gl") : ""}
+      ${qb ? cell(t.qb, "l") : ""}
       ${cell(t.offYppRank, "c gl " + q(t.offYppRank))}
       ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}
       ${cell(t.sosRank, "c gl " + q(t.sosRank))}
@@ -295,6 +299,14 @@ const EXPANDED = [
   {g:"Defense", cols:[{h:"Third down %", k:"oppThirdDown"}, {h:"Red zone %", k:"oppRedZone"}, {h:"Red zone att", k:"oppRedZoneAtt", x:["oppRedZoneAttPerPlay","/ play"]},
     {h:"Comp %", k:"oppCompletion"}, {h:"Interceptions", k:"interceptions", x:["interceptionsPerAtt","/ att"]}, {h:"Fumbles", k:"oppFumblesLost"}, {h:"Sack %", k:"sackPct"}]},
   {g:"Other", cols:[{h:"Penalties", k:"penaltyYards"}, {h:"Opp penalties", k:"oppPenaltyYards"}, {h:"FG %", k:"fgPct"}, {h:"SoS", k:"sos", rankOnly:true}, {h:"QBR", k:"qbr", rankOnly:true}, {h:"QB", text:"qb"}]},
+];
+// College basketball: the Coll Bball Power Rankings columns plus shooting detail
+const EXPANDED_CBB = [
+  {g:"Scoring", cols:[{h:"Off PPG", k:"ppg"}, {h:"Def PPG", k:"oppPpg"}, {h:"Avg margin", k:"margin"}]},
+  {g:"Efficiency", cols:[{h:"Off eff", k:"offEff"}, {h:"Def eff", k:"defEff"}, {h:"Possessions", k:"possPg"}]},
+  {g:"Shooting", cols:[{h:"FG %", k:"fgPct"}, {h:"Opp FG %", k:"oppFgPct"}, {h:"3 Pt %", k:"threePct"}, {h:"Opp 3 Pt %", k:"oppThreePct"}, {h:"FT %", k:"ftPct"}]},
+  {g:"Possession", cols:[{h:"Reb %", k:"rebPct"}, {h:"Turnover %", k:"tovPct"}, {h:"Forced TO %", k:"forcedTov"}]},
+  {g:"Schedule", cols:[{h:"SoS", k:"sos", rankOnly:true}, {h:"Rem SoS", k:"remSos", rankOnly:true}]},
 ];
 
 // QBR: a team with no qualified passer shows the model's placeholder rank on a grey cell.
@@ -327,6 +339,7 @@ function sortTh(id, label, cls, attrs = ""){
 function renderRankings(){
   const table = $("prTable");
   const expanded = $("expand").checked;
+  const EXP = data.sport === "cbb" ? EXPANDED_CBB : EXPANDED;
   table.classList.toggle("wide", expanded);
 
   // getters for every sortable column
@@ -334,7 +347,7 @@ function renderRankings(){
     pos: t => t.modelRank, team: t => t.name, modelRank: t => t.modelRank, record: t => t.record,
     qbr: qbrVal, qb: t => t.qb, off: t => t.offYppRank, def: t => t.defYppRank,
   };
-  if (expanded) for (const grp of EXPANDED) for (const c of grp.cols){
+  if (expanded) for (const grp of EXP) for (const c of grp.cols){
     if (c.text) continue;
     if (c.k !== "qbr") G[c.k + ".r"] = t => t.stats?.[c.k]?.r;
     if (!c.rankOnly) G[c.k + ".v"] = t => t.stats?.[c.k]?.v;
@@ -355,12 +368,12 @@ function renderRankings(){
     table.innerHTML = `<thead>
       <tr>${sortTh("pos", "#", "pa", 'rowspan="2"')}${sortTh("team", "Team", "pb l", 'rowspan="2"')}
         ${sortTh("modelRank", "Model rank", "c", 'rowspan="2"')}${sortTh("record", "Record", "c", 'rowspan="2"')}
-        ${sortTh("qbr", "QBR", "c gl", 'rowspan="2"')}${sortTh("qb", "QB", "l", 'rowspan="2"')}
+        ${sortTh("qbr", "QBR", "c gl qbc", 'rowspan="2"')}${sortTh("qb", "QB", "l qbc", 'rowspan="2"')}
         <th class="c off gl">Offense</th><th class="c def gl">Defense</th></tr>
       <tr>${sortTh("off", "Rank", "c off gl sub")}${sortTh("def", "Rank", "c def gl sub")}</tr></thead>
       <tbody>${rows.map((t, i) => `<tr>${front(t, i)}
-        ${qbrCell(t, "gl")}
-        ${cell(t.qb, "l")}
+        ${qbrCell(t, "gl qbc")}
+        ${cell(t.qb, "l qbc")}
         ${cell(t.offYppRank, "c gl " + q(t.offYppRank))}
         ${cell(t.defYppRank, "c gl " + q(t.defYppRank))}</tr>`).join("")}</tbody>`;
     return;
@@ -370,7 +383,7 @@ function renderRankings(){
   let h1 = sortTh("pos", "#", "pa", 'rowspan="3"') + sortTh("team", "Team", "pb l", 'rowspan="3"') +
            sortTh("modelRank", "Model rank", "c", 'rowspan="3"') + sortTh("record", "Record", "c", 'rowspan="3"');
   let h2 = "", h3 = "";
-  for (const grp of EXPANDED){
+  for (const grp of EXP){
     h1 += `<th class="grp2" colspan="${grp.cols.reduce((n, c) => n + span(c), 0)}">${esc(grp.g)}</th>`;
     grp.cols.forEach((c, i) => {
       const edge = i === 0 ? "gl" : "sl";
@@ -386,7 +399,7 @@ function renderRankings(){
   }
   const body = rows.map((t, i) => {
     let tds = front(t, i);
-    for (const grp of EXPANDED) grp.cols.forEach((c, j) => {
+    for (const grp of EXP) grp.cols.forEach((c, j) => {
       const edge = j === 0 ? "gl" : "sl";
       if (c.text) { tds += cell(t[c.text], "l " + edge); return; }
       if (c.k === "qbr") { tds += qbrCell(t, edge); return; }
@@ -444,8 +457,8 @@ function renderMatchup(){
         <td class="delta" rowspan="2">${g.delta == null ? "–" : `<b>${g.delta.toFixed(1)}</b>`}</td>` : ""}
       ${cell(t.record, "c sepL")}
       ${cell(t.modelRank, "c " + q(t.modelRank))}
-      ${qbrCell(t, "gap")}
-      ${cell(t.qb, "l")}
+      ${qbrCell(t, "gap qbc")}
+      ${cell(t.qb, "l qbc")}
       ${cell(t.offYppRank, "c sepL " + q(t.offYppRank))}
       ${cell(t.defYppRank, "c sepL " + q(t.defYppRank))}
       ${cell(t.sosRank, "c sepL " + q(t.sosRank))}`;
@@ -468,7 +481,7 @@ for (const [id, key] of [["picksOnly", "mp.picksOnly"], ["expand", "mp.expand"]]
 }
 
 // Address: #<sport>[-rankings|-division], e.g. #cfb-rankings. Old links (#rankings, #division) mean NFL.
-const SPORTS = ["nfl", "cfb"];
+const SPORTS = ["nfl", "cfb", "cbb"];
 const cache = {};
 let currentSport = null;
 

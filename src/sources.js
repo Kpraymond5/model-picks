@@ -88,19 +88,26 @@ export function parseCollegeStandings(json, teamByEspnId) {
 export function fpiUrl(season, league = "nfl") {
   return `https://site.web.api.espn.com/apis/fitt/v3/sports/football/${league}/powerindex?region=us&lang=en&limit=500&season=${season}`;
 }
-// The SoS columns live in the "fpi" category for the NFL and in "resume" for college.
-export function parseFpi(json, resolve) {
-  const cat = (json.categories || []).find(c => c.names?.includes("avgsosrank"));
-  const iSos = cat?.names?.indexOf("avgsosrank") ?? -1, iRem = cat?.names?.indexOf("sosremainingrank") ?? -1;
-  if (iSos < 0) throw new Error("FPI feed has no SoS column");
+// The SoS columns live in different categories per sport ("fpi" for the NFL, "resume" for college
+// football; BPI for basketball uses "sospastrank" and "sosremrank"), so each is looked up by name.
+export function parseFpi(json, resolve, { sosKeys = ["avgsosrank", "sospastrank"], remKeys = ["sosremainingrank", "sosremrank"] } = {}) {
+  const find = keys => {
+    for (const c of json.categories || []) for (const k of keys) { const i = c.names?.indexOf(k) ?? -1; if (i >= 0) return { cat: c.name, i }; }
+    return null;
+  };
+  const sos = find(sosKeys), rem = find(remKeys);
+  if (!sos) throw new Error("FPI/BPI feed has no SoS column");
+  const rank = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null;
+  const pick = (t, loc) => loc ? rank(t.categories?.find(c => c.name === loc.cat)?.values?.[loc.i]) : null;
   const out = {};
   for (const t of json.teams || []) {
     const team = resolve(t.team);
-    const vals = t.categories?.find(c => c.name === cat.name)?.values || [];
-    const rank = v => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null;
-    if (team) out[team] = { sos: rank(vals[iSos]), remSos: iRem >= 0 ? rank(vals[iRem]) : null };
+    if (team) out[team] = { sos: pick(t, sos), remSos: pick(t, rem) };
   }
   return out;
+}
+export function bpiUrl(season) {
+  return `https://site.web.api.espn.com/apis/fitt/v3/sports/basketball/mens-college-basketball/powerindex?region=us&lang=en&limit=500&season=${season}`;
 }
 
 // ESPN teams list -> [{id, slug, name}]

@@ -1,0 +1,24 @@
+{
+  "sport": "cbb",
+  "espnLeague": "mens-college-basketball",
+  "oddsSport": "basketball_ncaab",
+  "oddsBookmaker": "draftkings",
+  "homeField": -3.5,
+  "pickThreshold": 2.8,
+  "gamesWindowHours": 36,
+  "sosMissingRank": 365,
+  "teamAliases": {},
+  "stats": [
+    { "key": "ppg",       "label": "Off PPG",     "w1": 0.20, "w2": 0.0175 },
+    { "key": "oppPpg",    "label": "Def PPG",     "w1": 0.20, "w2": 0.0175 },
+    { "key": "offEff",    "label": "Off Eff",     "w1": 0.20, "w2": 0.195 },
+    { "key": "defEff",    "label": "Def Eff",     "w1": 0.20, "w2": 0.195 },
+    { "key": "ftPct",     "label": "FT %",        "w1": 0.40, "w2": 0.076, "useValue": true },
+    { "key": "threePct",  "label": "3 Pt %",      "w1": 0.40, "w2": 0.06,  "useValue": true },
+    { "key": "rebPct",    "label": "Reb %",       "w1": 0.21, "w2": 0.10 },
+    { "key": "tovPct",    "label": "Turnover",    "w1": 0.11, "w2": 0.06 },
+    { "key": "forcedTov", "label": "Forced TO",   "w1": 0.11, "w2": 0.04 },
+    { "key": "margin",    "label": "Avg. Margin", "w1": 0.06, "w2": 0.02 },
+    { "key": "sos",       "label": "SOS",         "w1": 0.17, "w2": 0.219 }
+  ]
+}
